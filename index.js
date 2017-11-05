@@ -7,7 +7,7 @@ const { APP_ID } = require("./config");
 
 const SKILL_NAME = "VoiceCoin";
 
-const HELP_MESSAGE = "You can say, how much is my Coinbase balance worth, what is your Bitcoin prediction for tomorrow, or, you can say exit... What can I help you with?";
+const HELP_MESSAGE = "You can say, how much your Coinbase balance is worth, what is your Bitcoin prediction for tomorrow, or, you can say exit... What can I help you with?";
 const HELP_REPROMPT = "What can I help you with?";
 
 const STOP_MESSAGE = "Goodbye!";
@@ -39,7 +39,7 @@ const handlers = {
                 this.response.speak(`
                     Hello! The current value of one bitcoin is \$${btnValue}, which makes your Coinbase wallet worth \$${value}.
                     The value has ${growth >= 0 ? "increased" : "decreased"} ${growth} percent since yesterday.
-                    Tomorrow, based on the news, my bitcoin prediction is ${readable}.
+                    Tomorrow, with some help from Watson, my bitcoin prediction is ${readable}.
                     `);                
 
                 this.emit(":responseReady");    
@@ -79,7 +79,7 @@ const handlers = {
         getPrediction().then(prediction => {
             const readable = readablePrediction(prediction);
 
-            this.response.speak(`My bitcoin prediction for tomorrow, based on the news, is ${readable}.`);
+            this.response.speak(`My bitcoin prediction for tomorrow, with a little help from Watson, is ${readable}.`);
             this.emit(":responseReady");
         });
     },

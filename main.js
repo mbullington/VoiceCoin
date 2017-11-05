@@ -86,7 +86,7 @@ function readablePrediction(prediction) {
 }
 
 // demo
-/*
+
 {
     Promise.all([getBitcoinValue(), getAccountValue(), getGrowth(2), getPrediction()])
         .then(list => {
@@ -100,7 +100,7 @@ function readablePrediction(prediction) {
             logError(err);
         });
 }
-*/
+
 
 module.exports = {
     getBitcoinValue,

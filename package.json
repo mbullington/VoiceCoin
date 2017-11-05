@@ -1,0 +1,16 @@
+{
+  "name": "voicecoin",
+  "version": "1.0.0",
+  "description": "Alexa skill for communicating with Coinbase.",
+  "main": "index.js",
+  "author": "People at HackPSU",
+  "license": "MIT",
+  "dependencies": {
+    "bignumber.js": "^4.1.0",
+    "coinbase": "^2.0.6",
+    "feedparser": "^2.2.3",
+    "moment": "^2.19.1",
+    "r2": "^2.0.0",
+    "watson-developer-cloud": "^2.42.0"
+  }
+}

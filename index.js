@@ -1,6 +1,8 @@
 const Alexa = require("alexa-sdk");
 
 const { getBitcoinValue, getAccountValue, getGrowth, getPrediction, readablePrediction } = require("./main");
+const { roundNum } = require("./lib/util");
+
 const { APP_ID } = require("./config");
 
 const SKILL_NAME = "VoiceCoin";
@@ -62,7 +64,7 @@ const handlers = {
         Promise.all([getGrowth(1), getAccountValue()]).then(list => {
             const [ growth, value ] = list;
             const ratio = 100 / (100 + growth);
-            const diff = Math.abs(value - value * ratio);
+            const diff = roundNum(Math.abs(value - value * ratio));
 
             if (growth >= 0) {
                 this.response.speak(`The value of bitcoin has increased by ${growth} percent since yesterday, meaning you've gained \$${diff}.`);

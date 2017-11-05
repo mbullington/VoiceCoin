@@ -6,6 +6,7 @@
   "author": "People at HackPSU",
   "license": "MIT",
   "dependencies": {
+    "alexa-sdk": "^1.0.18",
     "bignumber.js": "^4.1.0",
     "coinbase": "^2.0.6",
     "feedparser": "^2.2.3",

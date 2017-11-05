@@ -1,101 +1,92 @@
-const { API_KEY, API_SECRET } = require("./config");
+const Alexa = require("alexa-sdk");
 
-const Coinbase = require("./lib/coinbaseWrapper");
+const { getBitcoinValue, getAccountValue, getGrowth, getPrediction, readablePrediction } = require("./main");
+const { APP_ID } = require("./config");
 
-const spotPrice = require("./lib/spotPrice");
+const SKILL_NAME = "VoiceCoin";
 
-const bitcoinNewsTitles = require("./lib/bitcoinNewsTitles");
-const titleAnalysis = require("./lib/titleAnalysis");
-const combineSentiment = require("./lib/combineSentiment");
+const HELP_MESSAGE = "You can say, how much is my Coinbase balance worth, what is your Bitcoin prediction for tomorrow, or, you can say exit... What can I help you with?";
+const HELP_REPROMPT = "What can I help you with?";
 
-const { logError, roundNum } = require("./lib/util");
+const STOP_MESSAGE = "Goodbye!";
 
-const BigNumber = require("bignumber.js");
+exports.handler = function(event, context, callback) {
+    const alexa = Alexa.handler(event, context, callback);
 
-// functions and actual code
+    alexa.appId = APP_ID;
+    alexa.registerHandlers(handlers);
+    alexa.execute();
+};
 
-function fromBigNumber(bigNum) {
-    return roundNum(parseFloat(bigNum.toString()));
-}
+const handlers = {
+    "LaunchRequest": function() {
+        this.emit("GetUpdateIntent");
+    },
+    "GetUpdateIntent": function() {
+        Promise.all([getBitcoinValue(), getAccountValue(), getGrowth(2), getPrediction()])
+            .then(list => {
+                const [ btnValue, value, growth, prediction ] = list;
+                const readable = readablePrediction(prediction);
 
-const client = new Coinbase.Client({
-    apiKey: API_KEY,
-    apiSecret: API_SECRET
-});
+                this.response.cardRenderer(`${SKILL_NAME} Update`, `
+                    Bitcoin Value: \$${btnValue} ${growth >= 0 ? "+" : ""}${growth}
+                    Coinbase Wallet Amount: \$${value}
+                    Tomorrow's Prediction: ${readable}
+                `);
+                
+                this.response.speak(`
+                    Hello! The current value of one bitcoin is \$${btnValue}, which makes your Coinbase wallet worth \$${value}.
+                    The value has ${growth >= 0 ? "increased" : "decreased"} ${growth} percent since yesterday.
+                    Tomorrow, based on the news, my bitcoin prediction is ${readable}.
+                    `);                
 
-const CRYPTO_CURRENCY = "BTC";
-
-// get the current value of 1 BTN
-function getBitcoinValue() {
-    return spotPrice();
-}
-
-// get the value of your account in USD
-function getAccountValue() {
-    return Promise.all([spotPrice(), client.getAccountsPromise({})])
-        .then(list => {
-            const spotPrice = new BigNumber(list[0]);
-            let returnValue;
-
-            list[1].forEach(acct => {
-                // not BTN, so either Litecoin or Ethereum?
-                if (acct.currency != CRYPTO_CURRENCY) {
-                    return;
-                }
-
-                const amount = new BigNumber(acct.balance.amount);
-                returnValue = fromBigNumber(amount.times(spotPrice));
+                this.emit(":responseReady");    
+            })
+            .catch(err => {
+                logError(err);
             });
-
-            return returnValue;
+    },
+    "GetBtnValueIntent": function() {
+        getBitcoinValue().then(value => {
+            this.response.speak(`The current value of one bitcoin is \$${value}.`);
+            this.emit(":responseReady");    
         });
-}
-
-// get the BTN-USD growth from yesterday
-function getGrowth(daysBack) {
-    // spot price from today, yesterday
-    return Promise.all([spotPrice(), spotPrice(daysBack || 0)])
-        .then(list => {
-            const [today, yesterday] = list;
-            return roundNum(100 * (today / yesterday) - 100);
+    },
+    "GetBalanceValueIntent": function() {
+        getAccountValue().then(value => {
+            this.response.speak(`Your Coinbase wallet is currently worth \$${value}.`);
+            this.emit(":responseReady");                
         });
-}
+    },
+    "GetBtnGrowthIntent": function() {
+        getGrowth(1).then(growth => {
+            if (growth >= 0) {
+                this.response.speak(`The value of bitcoin has increased by ${growth} percent since yesterday.`);
+            } else {
+                this.response.speak(`The value of bitcoin has decreased by ${Math.abs(growth)} percent since yesterday.`);                
+            }
 
-function getPrediction() {
-    return Promise.all([getGrowth(10), bitcoinNewsTitles()])
-        .then(list => {
-            const [ growth, newsTitles ] = list;
-            return Promise.all(newsTitles.map(text => titleAnalysis(text))).then(numbers => {
-                return combineSentiment(numbers, growth);
-            });
+            this.emit(":responseReady");
         });
-}
+    },
+    "GetBtnPredictionIntent": function() {
+        getPrediction().then(prediction => {
+            const readable = readablePrediction(prediction);
 
-function readablePrediction(prediction) {
-    if (prediction > 0.5) {
-        return "positive";
-    } else if (prediction > 0) {
-        return "moderately positive";
-    } else if (!prediction) {
-        return "neutral";
-    } else if (prediction > -0.5) {
-        return "moderately negative";
-    } else if (prediction >= -1) {
-        return "negative";
-    }
-}
-
-// demo
-{
-    Promise.all([getBitcoinValue(), getAccountValue(), getGrowth(2), getPrediction()])
-        .then(list => {
-            const [ btnValue, value, growth, prediction ] = list;
-            console.log("Bitcoin value: $" + btnValue);
-            console.log("Value of wallet: $" + value);
-            console.log(growth + "% growth since yesterday.");
-            console.log("Forecast for tomorrow is " + readablePrediction(prediction) + ": " + prediction);
-        })
-        .catch(err => {
-            logError(err);
+            this.response.speak(`My bitcoin prediction for tomorrow, based on the news, is ${readable}.`);
+            this.emit(":responseReady");
         });
-}
+    },
+    "AMAZON.HelpIntent": function() {
+        this.response.speak(HELP_MESSAGE).listen(HELP_REPROMPT);
+        this.emit(":responseReady");
+    },
+    "AMAZON.CancelIntent": function() {
+        this.response.speak(STOP_MESSAGE);
+        this.emit(":responseReady");
+    },
+    "AMAZON.StopIntent": function() {
+        this.response.speak(STOP_MESSAGE);
+        this.emit(":responseReady");
+    },
+};

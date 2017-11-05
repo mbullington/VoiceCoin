@@ -59,11 +59,15 @@ const handlers = {
         });
     },
     "GetBtnGrowthIntent": function() {
-        getGrowth(1).then(growth => {
+        Promise.all([getGrowth(1), getAccountValue()]).then(list => {
+            const [ growth, value ] = list;
+            const ratio = 100 / (100 + growth);
+            const diff = Math.abs(value - value * ratio);
+
             if (growth >= 0) {
-                this.response.speak(`The value of bitcoin has increased by ${growth} percent since yesterday.`);
+                this.response.speak(`The value of bitcoin has increased by ${growth} percent since yesterday, meaning you've gained \$${diff}.`);
             } else {
-                this.response.speak(`The value of bitcoin has decreased by ${Math.abs(growth)} percent since yesterday.`);                
+                this.response.speak(`The value of bitcoin has decreased by ${Math.abs(growth)} percent since yesterday, meaning you've lost \$${diff}.`);                
             }
 
             this.emit(":responseReady");
